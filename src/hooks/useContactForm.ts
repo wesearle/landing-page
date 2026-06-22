@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { usePlausible } from './usePlausible';
+import { isFreeEmail, validateEmail } from '@/functions';
 import { CONTACT_API_URL, SLACK_CONTACT_API_URL } from '@/constants';
 
 enum ContactFormEvent {
@@ -58,6 +59,13 @@ export const useContactForm = () => {
     setFormData({ ...INITIAL_FORM_DATA });
   };
 
+  // Hidden anti-spam field. Real users never see or fill it; bots that auto-fill
+  // every field will, so a non-empty value flags the submission as spam.
+  const [honeypot, setHoneypot] = useState('');
+  const handleHoneypotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setHoneypot(e.target.value);
+  };
+
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof ContactForm, string>>>({});
   const handleFormErrorChange = (key?: keyof ContactForm, error?: string, fullObject?: typeof formErrors) => {
     setFormErrors(
@@ -72,13 +80,34 @@ export const useContactForm = () => {
   };
 
   const submitToContactService = async (eventName?: string): Promise<string> => {
+    // Honeypot tripped => almost certainly a bot. Drop it silently and report
+    // success so the bot doesn't retry, but never hit the contact APIs.
+    if (honeypot.trim()) return '';
+
+    // Centralized guard: this hook is the single source of truth for what may be
+    // sent to the contact APIs. Even if a caller (or a bot driving the page)
+    // skips its own validation, we never forward a blank/invalid submission that
+    // would produce an empty notification.
+    const firstName = formData.firstName.trim();
+    const lastName = formData.lastName.trim();
+    const email = formData.email.trim();
+    const phoneNumber = formData.phoneNumber.trim();
+    const company = formData.company.trim();
+    const message = (eventName || formData.message).trim();
+
+    if (!firstName || !email || !validateEmail(email) || isFreeEmail(email)) {
+      return 'Please enter your name and a valid business email address.';
+    }
+
+    const fullName = `${firstName} ${lastName}`.trim();
+
     trackEvent(ContactFormEvent.ContactFormSubmitted, {
       props: {
-        name: `${formData.firstName} ${formData.lastName}`,
-        email: formData.email,
-        phone: formData.phoneNumber,
-        organization: formData.company,
-        message: eventName || formData.message,
+        name: fullName,
+        email,
+        phone: phoneNumber,
+        organization: company,
+        message,
       },
     });
 
@@ -89,20 +118,20 @@ export const useContactForm = () => {
     });
 
     const contactError = await sendToService(CONTACT_API_URL, {
-      fullName: `${formData.firstName} ${formData.lastName}`,
-      businessEmail: formData.email,
-      phoneNumber: formData.phoneNumber,
-      organizationName: formData.company,
-      message: eventName || formData.message,
+      fullName,
+      businessEmail: email,
+      phoneNumber,
+      organizationName: company,
+      message,
     });
     if (contactError) return contactError;
 
     const slackError = await sendToService(SLACK_CONTACT_API_URL, {
-      name: `${formData.firstName} ${formData.lastName}`,
-      email: formData.email,
-      phone: formData.phoneNumber,
-      organization: formData.company,
-      message: eventName || formData.message,
+      name: fullName,
+      email,
+      phone: phoneNumber,
+      organization: company,
+      message,
     });
     if (slackError) return slackError;
 
@@ -113,6 +142,8 @@ export const useContactForm = () => {
     formData,
     handleFormDataChange,
     resetFormData,
+    honeypot,
+    handleHoneypotChange,
     formErrors,
     handleFormErrorChange,
     resetFormErrors,

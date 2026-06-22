@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useMobile } from '@/contexts';
 import { useContactForm } from '@/hooks';
 import { FlexColumn, FlexRow } from '@/styles';
-import { Button, Input, Text } from '@/components';
+import { Button, Honeypot, Input, Text } from '@/components';
 import styled, { useTheme } from 'styled-components';
 import { isFreeEmail, validateEmail } from '@/functions';
 
@@ -21,7 +21,7 @@ const Form = styled.form<{ $isMobile: boolean }>`
 export const EventForm = ({ eventName }: { eventName: string }) => {
   const theme = useTheme();
   const { isMobile } = useMobile();
-  const { formData, handleFormDataChange, formErrors, handleFormErrorChange, resetFormErrors, submitToContactService } = useContactForm();
+  const { formData, handleFormDataChange, honeypot, handleHoneypotChange, formErrors, handleFormErrorChange, resetFormErrors, submitToContactService } = useContactForm();
 
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState('');
@@ -80,6 +80,7 @@ export const EventForm = ({ eventName }: { eventName: string }) => {
 
   return (
     <Form $isMobile={isMobile} onSubmit={onSubmit}>
+      <Honeypot value={honeypot} onChange={handleHoneypotChange} />
       <Text fontSize={isMobile ? 28 : 38} fontWeight={600} lineHeight='110%'>
         {isDone ? 'Thanks for scheduling a meeting with us!' : 'Schedule a meeting with us at the event!'}
       </Text>

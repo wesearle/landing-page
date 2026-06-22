@@ -6,7 +6,7 @@ import { useContactForm } from '@/hooks';
 import styled, { useTheme } from 'styled-components';
 import { isFreeEmail, validateEmail } from '@/functions';
 import { FlexColumn, FlexRow, hexOpacity } from '@/styles';
-import { Button, Input, Modal, Text } from '@/components';
+import { Button, Honeypot, Input, Modal, Text } from '@/components';
 
 interface TrialModalProps {
   isOpen: boolean;
@@ -85,7 +85,7 @@ const SuccessMark = styled.div`
 export const TrialModal = ({ isOpen, onClose }: TrialModalProps) => {
   const theme = useTheme();
   const { isMobile } = useMobile();
-  const { formData, handleFormDataChange, resetFormData, formErrors, handleFormErrorChange, resetFormErrors, submitToContactService } = useContactForm();
+  const { formData, handleFormDataChange, resetFormData, honeypot, handleHoneypotChange, formErrors, handleFormErrorChange, resetFormErrors, submitToContactService } = useContactForm();
 
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState('');
@@ -167,6 +167,7 @@ export const TrialModal = ({ isOpen, onClose }: TrialModalProps) => {
 
           <Col $isMobile={isMobile}>
             <Form onSubmit={onSubmit}>
+              <Honeypot value={honeypot} onChange={handleHoneypotChange} />
               <Input name='firstName' label='Name' required autoFocus value={formData.firstName} onChange={onChange} disabled={isLoading} errorMessage={formErrors.firstName} stretch />
               <Input name='email' label='Work Email' required value={formData.email} onChange={onChange} disabled={isLoading} errorMessage={formErrors.email} stretch />
               <Input name='company' label='Company' value={formData.company} onChange={onChange} disabled={isLoading} stretch />

@@ -6,7 +6,7 @@ import { useContactForm } from '@/hooks';
 import { FlexColumn, hexOpacity } from '@/styles';
 import styled, { useTheme } from 'styled-components';
 import { isFreeEmail, validateEmail } from '@/functions';
-import { Button, Input, Modal, Text, TextArea } from '@/components';
+import { Button, Honeypot, Input, Modal, Text, TextArea } from '@/components';
 
 interface ContactUsModalProps {
   isOpen: boolean;
@@ -37,7 +37,7 @@ const PushRight = styled.div<{ $isMobile: boolean }>`
 export const ContactUsModal = ({ isOpen, onClose }: ContactUsModalProps) => {
   const theme = useTheme();
   const { isMobile } = useMobile();
-  const { formData, handleFormDataChange, resetFormData, formErrors, handleFormErrorChange, resetFormErrors, submitToContactService } = useContactForm();
+  const { formData, handleFormDataChange, resetFormData, honeypot, handleHoneypotChange, formErrors, handleFormErrorChange, resetFormErrors, submitToContactService } = useContactForm();
 
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState('');
@@ -101,6 +101,7 @@ export const ContactUsModal = ({ isOpen, onClose }: ContactUsModalProps) => {
       </Text>
 
       <Form $isMobile={isMobile} onSubmit={onSubmit}>
+        <Honeypot value={honeypot} onChange={handleHoneypotChange} />
         <HalfForm $isMobile={isMobile}>
           <Input name='firstName' label='First Name' required value={formData.firstName} onChange={onChange} disabled={isLoading} errorMessage={formErrors.firstName} stretch />
           <Input name='lastName' label='Last Name' required value={formData.lastName} onChange={onChange} disabled={isLoading} errorMessage={formErrors.lastName} stretch />
