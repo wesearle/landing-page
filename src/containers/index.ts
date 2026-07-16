@@ -2,6 +2,8 @@ export * from './announcement-banner';
 export * from './blog-single';
 export * from './blogs-all';
 export * from './bottom-cta';
+export * from './comparison-vs';
+export * from './comparisons-hub';
 export * from './event-single';
 export * from './events-all';
 export * from './faq';
