@@ -1,4 +1,5 @@
 export * from './common';
+export * from './comparisons';
 export * from './dinner-events';
 export * from './faq';
 export * from './how-to-start';

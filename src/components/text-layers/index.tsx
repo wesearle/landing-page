@@ -17,6 +17,7 @@ interface TitleSettingProps {
 
 interface DescriptionSettingProps {
   center?: boolean;
+  maxWidth?: string;
 }
 
 interface TextLayersProps {
@@ -71,8 +72,8 @@ const Title = styled(Text)<{
   text-align: ${({ $center }) => ($center ? 'center' : 'start')};
 `;
 
-const DescriptionsWrapper = styled.div<{ $isMobile: boolean }>`
-  max-width: ${({ $isMobile }) => ($isMobile ? 'unset' : '50vw')};
+const DescriptionsWrapper = styled.div<{ $isMobile: boolean; $maxWidth?: string }>`
+  max-width: ${({ $isMobile, $maxWidth }) => $maxWidth || ($isMobile ? 'unset' : '50vw')};
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -134,7 +135,7 @@ export const TextLayers = ({ miniTitle, title, typistTitles, titleSettings, desc
       ) : null}
 
       {descriptions?.length ? (
-        <DescriptionsWrapper $isMobile={isMobile}>
+        <DescriptionsWrapper $isMobile={isMobile} $maxWidth={descriptionSettings?.maxWidth}>
           {descriptions.map((text) => (
             <Description key={`desc-${text}`} $isMobile={isMobile} $center={descriptionSettings?.center}>
               {text}

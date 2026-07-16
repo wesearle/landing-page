@@ -19,6 +19,10 @@ export const NAVIGATION: NavItem[] = [
     href: '/about',
   },
   {
+    label: 'Comparisons',
+    href: '/comparisons',
+  },
+  {
     label: 'Pricing',
     href: '/pricing',
   },
