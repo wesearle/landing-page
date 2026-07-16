@@ -59,7 +59,7 @@ export const COMPARISONS: ComparisonPage[] = [
         },
         {
           title: 'Encrypted Traffic & mesh-aware',
-          body: 'TLS context propgation and service-mesh context.',
+          body: 'TLS context propagation and service-mesh context.',
           icon: '/assets/icons/comparisons/lock.svg',
         },
         {

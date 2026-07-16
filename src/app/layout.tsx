@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Script from 'next/script';
 
 const URI = 'https://odigos.io',
-  LOGO = '/favicon.ico',
+  LOGO = '/assets/odigos/logo_white_filled.svg',
   TITLE = 'Odigos - Ask Production Anything',
   DESCRIPTION = 'AI writes the code now. The tools watching it in production were built 20 years ago. Odigos sees inside every running service and answers any question the second it breaks. No redeploy. No overhead. It cannot take production down. Root cause in seconds, not days.',
   KEYWORDS = ['AI observability', 'observability for AI', 'production context', 'AI SRE', 'incident resolution', 'OpenTelemetry', 'eBPF', 'Observability', 'Distributed Tracing', 'Traces', 'Metrics', 'Logs'];
@@ -30,9 +30,9 @@ type RootLayoutProps = Readonly<{ children: React.ReactNode }>;
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang='en'>
+    <html lang='en' suppressHydrationWarning>
       <head>
-        <link rel='icon' href='/favicon.ico' type='image/x-icon' />
+        <link rel='icon' href={LOGO} type='image/svg+xml' />
         <meta content='width=device-width, initial-scale=1' name='viewport' />
         <meta name='description' content={metadata.description as string} />
         <title>{metadata.title as string}</title>
@@ -79,7 +79,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
         style={{
           width: '100%',
           maxWidth: '100vw',
-          overflowX: 'hidden',
+          overflowX: 'clip',
           minHeight: '100vh',
           margin: 0,
           padding: 0,
