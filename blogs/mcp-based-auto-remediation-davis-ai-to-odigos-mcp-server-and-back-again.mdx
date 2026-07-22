@@ -1,0 +1,264 @@
+---
+pubDate: 'Jul 21 2026'
+author: Justin LeJeune
+authorImage: ''
+image: '/assets/blogs/mcp-based-auto-remediation-davis-ai-to-odigos-mcp-server-and-back-again/hero.png'
+title: 'MCP Based Auto Remediation: Davis AI to Odigos MCP Server and Back Again'
+description: 'How we wired incident detection to Odigos MCP so instrumentation deepens on problem open and reverts on close.'
+metadata: 'Odigos MCP, Dynatrace, incident response, OpenTelemetry, dynamic instrumentation'
+category: 'Odigos'
+tags: [mcp, instrumentation, opentelemetry, distributed-tracing, dynatrace]
+buttonText: 'Watch the demo'
+buttonLink: 'https://www.youtube.com/watch?v=9GYwpvUinck'
+---
+
+Most of the time, you want to be as lean and efficient with your telemetry data as possible. Collecting payloads, code attributes, 100% of distributed traces and stacktraces on every request gets expensive very quickly. So teams keep the baseline light: enough to know that something failed, not enough to reconstruct why without another trip through the instrumentation config.
+
+That works — until something breaks. Then the context you left out is exactly what you need, and someone is manually flipping rules in the middle of an incident.
+
+We kept asking a simpler question: what if the system that already detected the problem could ask Odigos to deepen the instrumentation for you — and just as importantly, put it back when the problem closed?
+
+That's what Odigos MCP is for. This post is how we stood that loop up end to end. We used Dynatrace, Davis AI and Workflows as the proof of concept, but the pattern isn't tied to Dynatrace specifically. Any backend that can detect an incident and call an HTTP endpoint can pull the same lever in Odigos.
+
+**[Watch the demo video](https://www.youtube.com/watch?v=9GYwpvUinck)** for the full walkthrough — Davis detecting a problem, workflows calling Odigos MCP, enriched traces landing in Dynatrace, and instrumentation reverting when the problem closes.
+
+## The Pattern (Backend-Agnostic)
+
+The shape is deliberately simple here:
+
+1. Odigos instruments the app and exports OTLP into your observability backend.
+2. That backend detects a problem — failure rate, error spike, latency, whatever it already watches.
+3. On problem open, your incident automation calls a small remediation webhook with relevant incident context.
+4. That endpoint talks to the Odigos MCP server and creates temporary instrumentation rules (payloads, code attributes, and so on).
+5. New failing traces land in the same backend with the extra context.
+6. On problem close, a second call reverts — MCP deletes the temporary rules, baseline returns.
+
+| Layer | Job |
+| --- | --- |
+| Your APM / observability backend | Detect + orchestrate |
+| Thin webhook / automation | Translate "incident" into MCP tool calls |
+| Odigos MCP | Mutate what gets recorded |
+| OTLP pipeline | Show the richer data back where you already look |
+
+In our demo, Dynatrace filled the first row. Grafana Alerting, PagerDuty + webhook, custom ops bots, or another OpenTelemetry-aware platform could fill it just as well. Odigos doesn't need to know who called MCP — only that something asked for deeper capture, then asked to turn it off.
+
+## Why MCP Instead of Clicking Around in the UI
+
+Odigos already lets you change instrumentation through the UI and Kubernetes CRDs. MCP sits on top of that as a tool interface agents and automation can call: enable write mode, create an instrumentation rule, delete it when you're done.
+
+For this demo that mattered for two reasons:
+
+- Incidents don't wait for a human to find the right screen. Whoever gets paged needs a machine-callable API.
+- The change has to be reversible. Magnify during the fire, dial it back when it's out — same path in both directions.
+
+We kept Odigos MCP in-cluster only (ui.odigos-system…/mcp, read-write). The observability backend never talks to MCP directly. It hits a thin webhook we control; the webhook is the only thing that calls MCP. That keeps write access inside the cluster, no matter which product sits upstream.
+
+MCP ships with Odigos Enterprise; we run it in-cluster with read-write mode only for the remediation webhook.
+
+## What We Actually Built (Dynatrace as the Example)
+
+### 1. Cluster + Odigos + destination
+
+A GKE cluster running OdiMall (our multi-service demo app), Odigos with MCP enabled, and an OTLP destination so traces already flow into Dynatrace — the same place Davis watches.
+
+Swap the destination, and the rest of the loop still applies with whatever backend you already have in use today.
+
+### 2. A remediation webhook
+
+A small HTTP service with two endpoints:
+
+- `POST /remediate` — create the temporary instrumentation rules via MCP
+- `POST /revert` — delete those rules
+
+No LLM in the path for this version. The backend decides when; the webhook decides what to ask MCP for. That kept the demo honest and debuggable.
+
+The rules we create on remediate:
+
+- HTTP payload collection — request/response bodies on the failing path
+- Messaging payload collection — when the path crosses Kafka
+- Code attributes — function, file, line, and stacktrace where the language/library supports it
+
+Those are the same levers you'd toggle by hand in the Odigos UI. MCP just does it on demand.
+
+To keep things simple for this demonstration, we removed all but basic logic from the webhook/automation layer. This is where agentic AI or your own custom business logic would live — controlling what levers to pull in Odigos' MCP server and when.
+
+For clarity, we only turned on three rule types in this demo. MCP exposes many more configuration options than we needed to prove the loop.
+
+### 3. Incident automation (Davis + Workflows in our case)
+
+This part is product-specific, but the job is universal: fire on open, fire on close, don't double-fire.
+
+In Dynatrace, Davis often opened the problem on api-gateway even when the interesting work was downstream. Filters that assumed a specific root-cause service never fired. The fix: trigger on problem state — active for remediate, closed for revert — and condition the HTTP tasks so both workflows don't run on every event.
+
+Once that was clean, the UI matched the architecture: problem opens → successful remediate → rules appear in Odigos → enriched spans in the backend → problem closes → successful revert → rules gone.
+
+If you wire this to another stack, you're implementing the same two hooks: "incident started" and "incident ended."
+
+## What Changes in the Trace
+
+### Before MCP
+
+Same failing waterfall: gateway → order-service → inventory conflict → upstream 5XX error. You know it failed. You don't have the body that was sent, or much code-level signal on the span.
+
+### After MCP
+
+Same failing request. New attributes on those spans — payloads and code context — without restarting pods. That's the point: the incident path gets deeper instrumentation while it's still the incident path.
+
+On the Kafka leg (e.g. order → notification), spans can include `messaging.message.payload` so you see the event body, not just that a consumer failed.
+
+When the problem closes, the second call tears the rules down. You're not permanently paying for verbose capture on every request. All of this happens as soon as an issue is opened and is reversed as soon as it closes, with the ability to add in any amount of logic around why/when the MCP server is invoked.
+
+## The Broader Point
+
+This is the same idea we keep coming back to: the model or the APM isn't the bottleneck — the data that reaches it is. Lean by default. Deeper when error rates spike. Instrumentation that preserves the anomaly instead of hoping a fixed sample rate caught it.
+
+Odigos MCP makes that depth a callable control plane. Dynatrace was our proof point because that's how a lot of teams already run ops — but the principle is simple: detect anywhere, adjust the data plane in Odigos, put it away when you're done.
+
+**[Watch the demo video](https://www.youtube.com/watch?v=9GYwpvUinck)** to see the full loop in action.
+
+## Odigos MCP Tools Reference
+
+Odigos MCP exposes **83 tools** for reading cluster state and mutating instrumentation, sampling, destinations, and more. Tools are grouped below by area. Write operations require `enable_write_mode` first; check with `get_access_mode`.
+
+### Access & safety
+
+| Tool | What it does |
+| --- | --- |
+| `get_access_mode` | Report whether the server is in read-only or read-write mode |
+| `enable_write_mode` | Enable cluster-mutating tools (requires confirmation) |
+| `disable_write_mode` | Switch back to read-only mode |
+
+### Cluster health & overview
+
+| Tool | What it does |
+| --- | --- |
+| `describe_odigos` | Cluster-wide health: version, tier, gateway/odiglet status |
+| `get_gateway_info` | Gateway deployment rollout, replicas, resources |
+| `get_odiglet_info` | Odiglet DaemonSet status per node |
+| `get_overview_metrics` | Per-source and per-destination bytes sent and throughput |
+| `get_service_map` | Service-call topology with request counts |
+| `get_peer_sources` | Inbound and outbound peers for one service |
+| `collect_diagnose_bundle` | Diagnostic bundle for support (logs, CRDs, profiles, metrics) |
+| `pause_odigos` | Pause all reconciliation by scaling instrumentor and odiglet to zero |
+
+### Sources (instrumentation)
+
+| Tool | What it does |
+| --- | --- |
+| `list_sources` | List all instrumented workloads |
+| `describe_source` | Full status for one workload |
+| `list_workloads_in_namespace` | List all workloads in a namespace |
+| `instrument_source` | Instrument a workload (creates Source CRD; may restart pods) |
+| `instrument_namespace` | Bulk-instrument an entire namespace |
+| `uninstrument_source` | Remove instrumentation from a workload |
+| `uninstrument_namespace` | Remove namespace-level instrumentation |
+| `uninstrument_cluster` | Remove all instrumentation cluster-wide |
+| `update_source` | Override service name or distro for a container |
+| `get_source_conditions` | Aggregated error/stuck conditions across Sources |
+| `get_runtime_detection` | Detected language, runtime version, and libc per container |
+| `get_instrumentation_health` | Per-pod SDK/eBPF health (tracer, sampler, exporter) |
+| `recover_from_rollback` | Lift auto-rollback after agent-caused crash |
+| `restart_workloads` | Rolling restart after config changes |
+| `restart_pod` | Delete a single pod so its controller recreates it |
+
+### Instrumentation rules
+
+| Tool | What it does |
+| --- | --- |
+| `list_instrumentation_rules` | List all instrumentation rules |
+| `get_instrumentation_rule` | Return one rule's full spec |
+| `create_instrumentation_rule` | Create a rule (headers, payload, code attributes, and more) |
+| `update_instrumentation_rule` | Modify an existing rule |
+| `delete_instrumentation_rule` | Delete a rule by resource name |
+| `add_custom_instrumentation` | Add an eBPF probe for a specific function or method |
+
+### Sampling
+
+| Tool | What it does |
+| --- | --- |
+| `get_sampling` | List Sampling CRs with per-group rule counts |
+| `get_sampling_group` | Return one sampling group's full spec |
+| `create_sampling_group` | Create an empty sampling group |
+| `delete_sampling_group` | Delete a group and all its rules |
+| `create_highly_relevant_operation_rule` | Always keep traces you care about (errors, slow paths) |
+| `update_highly_relevant_operation_rule` | Modify a highly-relevant rule |
+| `delete_highly_relevant_operation_rule` | Remove a highly-relevant rule |
+| `create_noisy_operation_rule` | Drop high-volume, low-value traces |
+| `update_noisy_operation_rule` | Modify a noisy-operation rule |
+| `delete_noisy_operation_rule` | Remove a noisy-operation rule |
+| `create_cost_reduction_rule` | Down-sample high-volume operations to cut spend |
+| `update_cost_reduction_rule` | Modify a cost-reduction rule |
+| `delete_cost_reduction_rule` | Remove a cost-reduction rule |
+
+### Destinations (telemetry backends)
+
+| Tool | What it does |
+| --- | --- |
+| `list_destinations` | List all configured destinations |
+| `get_destination` | Return one destination's full spec |
+| `list_destination_types` | List supported types (Datadog, Jaeger, and others) |
+| `get_destination_schema` | Required, optional, and secret fields for a destination type |
+| `list_potential_destinations` | Auto-discovered destinations from cluster annotations |
+| `create_destination` | Create a new destination |
+| `update_destination` | Update an existing destination |
+| `delete_destination` | Delete a destination and stop telemetry flow |
+
+### Actions (collector pipeline processing)
+
+| Tool | What it does |
+| --- | --- |
+| `list_actions` | List all Actions (PII masking, attribute edits, and more) |
+| `get_action` | Return one Action's full spec |
+| `create_action` | Create an Action (K8sAttributesResolver, AddClusterInfo, and more) |
+| `update_action` | Update an existing Action |
+| `delete_action` | Delete an Action |
+
+### Profiling
+
+| Tool | What it does |
+| --- | --- |
+| `enable_source_profiling` | Open an on-demand profiling slot for a workload |
+| `disable_source_profiling` | Close a profiling slot and free buffered data |
+| `clear_source_profiling_buffer` | Drop buffered samples but keep the slot active |
+| `get_source_profile` | Return a full flamebearer profile (large response) |
+| `get_source_hot_functions` | Top hot functions ranked by self time |
+| `list_profiling_slots` | List active profiling slots and memory stats |
+
+### Data streams
+
+| Tool | What it does |
+| --- | --- |
+| `list_data_streams` | List data stream names with per-stream counts |
+| `update_data_stream` | Rename a stream (cascades to Sources and Destinations) |
+| `delete_data_stream` | Delete a stream and remove labels |
+
+### Distributions & profiles
+
+| Tool | What it does |
+| --- | --- |
+| `list_distros` | List available OTel distributions by language |
+| `get_distro` | Return full spec for one distribution |
+| `set_distro` | Select a distribution for a container |
+| `list_profiles` | List curated profile presets |
+| `apply_profile` | Apply a profile to OdigosConfiguration |
+
+### Configuration
+
+| Tool | What it does |
+| --- | --- |
+| `get_effective_config` | Return merged effective OdigosConfiguration |
+| `get_config_yamls` | UI form schema for all config fields |
+| `update_local_ui_config` | Write local UI overrides |
+| `reset_local_ui_config` | Reset local UI config to defaults |
+| `update_remote_config` | Write central-managed RemoteConfig |
+| `set_component_log_level` | Set log level for autoscaler, scheduler, instrumentor, odiglet, and others |
+
+### Kubernetes introspection
+
+| Tool | What it does |
+| --- | --- |
+| `get_k8s_manifest` | Raw YAML for any K8s resource Odigos knows about |
+| `get_pod_details` | Full pod details (containers, lifecycle, resources) |
+| `get_collector_pod` | Gateway or odiglet pod manifest and lifecycle state |
+| `list_gateway_pods` | List gateway collector pods |
+| `list_odiglet_pods` | Per-node odiglet pods with live throughput metrics |
