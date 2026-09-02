@@ -14,6 +14,13 @@ export const CUSTOMERS = [
     height: 39,
   },
   {
+    src: '/assets/partners/merck.svg',
+    alt: 'merck',
+    href: 'https://merck.com',
+    width: 116,
+    height: 30,
+  },
+  {
     src: '/assets/partners/avodaq.svg',
     alt: 'avodaq',
     href: 'https://avodaq.com',
@@ -28,7 +35,7 @@ export const CUSTOMERS = [
     height: 20,
   },
   {
-    src: '/assets/partners/hpe.svg',
+    src: '/assets/partners/hpe.png',
     alt: 'hp enterprise',
     href: 'https://hpe.com',
     width: 70,
@@ -42,14 +49,14 @@ export const CUSTOMERS = [
     height: 54,
   },
   {
-    src: '/assets/partners/deephealth.svg',
+    src: '/assets/partners/deephealth.png',
     alt: 'deephealth',
     href: 'https://deephealth.com',
     width: 131,
     height: 29,
   },
   {
-    src: '/assets/partners/omnissa.svg',
+    src: '/assets/partners/omnissa.png',
     alt: 'omnissa',
     href: 'https://omnissa.com',
     width: 138,

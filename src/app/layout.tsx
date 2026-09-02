@@ -1,28 +1,42 @@
 import type { Metadata } from 'next';
 import Script from 'next/script';
+import { Geist, Geist_Mono, Inter } from 'next/font/google';
+import { ORGANIZATION_LD, WEBSITE_LD, ldScript } from '@/constants';
+
+const display = Geist({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-display', display: 'swap' });
+const mono = Geist_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-mono', display: 'swap' });
+const body = Inter({ subsets: ['latin'], weight: ['300', '400', '500', '600', '700'], variable: '--font-body', display: 'swap' });
 
 const URI = 'https://odigos.io',
-  LOGO = '/assets/odigos/logo_white_filled.svg',
-  TITLE = 'Odigos - Ask Production Anything',
-  DESCRIPTION = 'AI writes the code now. The tools watching it in production were built 20 years ago. Odigos sees inside every running service and answers any question the second it breaks. No redeploy. No overhead. It cannot take production down. Root cause in seconds, not days.',
-  KEYWORDS = ['AI observability', 'observability for AI', 'production context', 'AI SRE', 'incident resolution', 'OpenTelemetry', 'eBPF', 'Observability', 'Distributed Tracing', 'Traces', 'Metrics', 'Logs'];
+  ICON = '/icon.png',
+  OG = '/og.png',
+  TITLE = 'Odigos · Dynamic telemetry for AI agents',
+  DESCRIPTION = 'Ask production a question nobody set it up to answer. Odigos reads the arguments and return values of any function in a live service, in seconds, with no code change.',
+  KEYWORDS = ['dynamic telemetry', 'dynamic instrumentation', 'eBPF', 'AI SRE', 'AI agents', 'production debugging', 'OpenTelemetry', 'observability', 'distributed tracing', 'incident resolution', 'runtime context'];
 
 export const metadata: Metadata = {
   metadataBase: new URL(URI),
   title: TITLE,
-  applicationName: TITLE,
+  applicationName: 'Odigos',
   description: DESCRIPTION,
-  icons: LOGO,
+  icons: { icon: ICON, apple: '/apple-icon.png' },
   keywords: KEYWORDS,
   robots: 'index, follow',
+  alternates: { types: { 'application/rss+xml': `${URI}/feed.xml` } },
   openGraph: {
     title: TITLE,
     description: DESCRIPTION,
-    images: LOGO,
+    images: [{ url: OG, width: 1200, height: 630, alt: TITLE }],
     type: 'website',
     url: URI,
-    siteName: TITLE,
+    siteName: 'Odigos',
     locale: 'en_US',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: TITLE,
+    description: DESCRIPTION,
+    images: [OG],
   },
 };
 
@@ -30,12 +44,21 @@ type RootLayoutProps = Readonly<{ children: React.ReactNode }>;
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang='en' suppressHydrationWarning>
-      <head>
-        <link rel='icon' href={LOGO} type='image/svg+xml' />
-        <meta content='width=device-width, initial-scale=1' name='viewport' />
-        <meta name='description' content={metadata.description as string} />
-        <title>{metadata.title as string}</title>
+    <html lang='en' suppressHydrationWarning className={`${display.variable} ${mono.variable} ${body.variable}`}>
+      <body
+        suppressHydrationWarning={true}
+        style={{
+          width: '100%',
+          maxWidth: '100vw',
+          overflowX: 'clip',
+          minHeight: '100vh',
+          margin: 0,
+          padding: 0,
+          backgroundColor: '#0F0F0F',
+        }}
+      >
+        <script type='application/ld+json' dangerouslySetInnerHTML={ldScript(ORGANIZATION_LD)} />
+        <script type='application/ld+json' dangerouslySetInnerHTML={ldScript(WEBSITE_LD)} />
 
         <Script
           id='consent-defaults'
@@ -72,20 +95,6 @@ export default function RootLayout({ children }: RootLayoutProps) {
             `,
           }}
         />
-      </head>
-
-      <body
-        suppressHydrationWarning={true}
-        style={{
-          width: '100%',
-          maxWidth: '100vw',
-          overflowX: 'clip',
-          minHeight: '100vh',
-          margin: 0,
-          padding: 0,
-          backgroundColor: '#0F0F0F',
-        }}
-      >
         {children}
       </body>
     </html>

@@ -1,28 +1,32 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { useEvents } from '@/contexts';
-import { EventsAll, Hero3 } from '@/containers';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { EventsContent } from './events-content';
 
-const Event = () => {
+/* Boundary scoped to the query-string reader only, so the listing still
+   server-renders. */
+const LatestRedirect = () => {
   const { events } = useEvents();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const shouldGoToLatest = searchParams?.get('latest') != null && events.length > 0;
+  const goToLatest = searchParams?.get('latest') != null && events.length > 0;
 
   useEffect(() => {
-    if (shouldGoToLatest) router.push(`/events/${events[0].slug}`);
-  }, [router, shouldGoToLatest, events]);
+    if (goToLatest) router.push(`/events/${events[0].slug}`);
+  }, [router, goToLatest, events]);
 
-  if (shouldGoToLatest) return null;
-
-  return (
-    <>
-      <EventsAll />
-      <Hero3 />
-    </>
-  );
+  return null;
 };
 
-export default Event;
+const EventPage = () => (
+  <>
+    <Suspense fallback={null}>
+      <LatestRedirect />
+    </Suspense>
+    <EventsContent />
+  </>
+);
+
+export default EventPage;

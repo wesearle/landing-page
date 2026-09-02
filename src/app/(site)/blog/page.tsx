@@ -1,28 +1,33 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { useBlogs } from '@/contexts';
-import { BlogsAll, Hero3 } from '@/containers';
+import { BlogContent } from './blog-content';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-const Blog = () => {
+/* Only this bit reads the query string, so only this bit needs a boundary.
+   Wrapping the whole page made the listing client-only and left the server
+   HTML empty, which matters for a page search engines are meant to index. */
+const LatestRedirect = () => {
   const { blogs } = useBlogs();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const shouldGoToLatest = searchParams?.get('latest') != null && blogs.length > 0;
+  const goToLatest = searchParams?.get('latest') != null && blogs.length > 0;
 
   useEffect(() => {
-    if (shouldGoToLatest) router.push(`/blog/${blogs[0].slug}`);
-  }, [router, shouldGoToLatest, blogs]);
+    if (goToLatest) router.push(`/blog/${blogs[0].slug}`);
+  }, [router, goToLatest, blogs]);
 
-  if (shouldGoToLatest) return null;
-
-  return (
-    <>
-      <BlogsAll />
-      <Hero3 />
-    </>
-  );
+  return null;
 };
 
-export default Blog;
+const BlogPage = () => (
+  <>
+    <Suspense fallback={null}>
+      <LatestRedirect />
+    </Suspense>
+    <BlogContent />
+  </>
+);
+
+export default BlogPage;
