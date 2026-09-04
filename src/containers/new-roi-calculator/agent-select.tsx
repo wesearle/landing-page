@@ -22,7 +22,7 @@ const Field = styled.div`
 `;
 
 const Label = styled.span`
-  color: var(--nd-text-secondary);
+  color: var(--ink-soft);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -39,36 +39,36 @@ const Trigger = styled.button`
   justify-content: space-between;
   gap: 16px;
   padding: 14px 14px 14px 16px;
-  border: 1px solid var(--nd-border);
+  border: 1px solid var(--line);
   border-radius: 14px;
-  background: var(--nd-surface-raised);
-  color: var(--nd-text-strong);
+  background: var(--paper-2);
+  color: var(--ink);
   font-size: 15px;
   line-height: 1.2;
   text-align: left;
   cursor: pointer;
   outline: none;
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--nd-text-strong) 4%, transparent);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 4%, transparent);
   transition:
     border-color 160ms ease,
     box-shadow 160ms ease,
     background 160ms ease;
 
   &:hover {
-    border-color: color-mix(in srgb, var(--nd-accent) 28%, var(--nd-border));
-    background: color-mix(in srgb, var(--nd-accent) 4%, var(--nd-surface-raised));
+    border-color: color-mix(in srgb, var(--accent) 28%, var(--line));
+    background: color-mix(in srgb, var(--accent) 4%, var(--paper-2));
   }
 
   &:focus-visible {
-    border-color: var(--nd-accent);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--nd-accent) 18%, transparent);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
   }
 
   &[aria-expanded='true'] {
-    border-color: color-mix(in srgb, var(--nd-accent) 40%, var(--nd-border));
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
     box-shadow:
-      0 0 0 3px color-mix(in srgb, var(--nd-accent) 14%, transparent),
-      0 10px 28px color-mix(in srgb, var(--nd-text-strong) 8%, transparent);
+      0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent),
+      0 10px 28px color-mix(in srgb, var(--ink) 8%, transparent);
   }
 `;
 
@@ -87,8 +87,8 @@ const ChevronWrap = styled.span<{ $open: boolean }>`
   height: 28px;
   place-items: center;
   border-radius: 999px;
-  background: var(--nd-stage);
-  color: var(--nd-text-secondary);
+  background: var(--paper-3);
+  color: var(--ink-soft);
   transition:
     transform 180ms ease,
     background 160ms ease,
@@ -96,8 +96,8 @@ const ChevronWrap = styled.span<{ $open: boolean }>`
   transform: rotate(${({ $open }) => ($open ? '180deg' : '0deg')});
 
   ${Trigger}[aria-expanded='true'] & {
-    background: color-mix(in srgb, var(--nd-accent) 14%, var(--nd-stage));
-    color: var(--nd-accent);
+    background: color-mix(in srgb, var(--accent) 14%, var(--paper-3));
+    color: var(--accent);
   }
 `;
 
@@ -117,13 +117,13 @@ const Menu = styled.ul`
   z-index: 20;
   margin: 0;
   padding: 6px;
-  border: 1px solid var(--nd-border);
+  border: 1px solid var(--line);
   border-radius: 14px;
-  background: var(--nd-surface-raised);
+  background: var(--paper-2);
   list-style: none;
   box-shadow:
-    0 16px 40px color-mix(in srgb, var(--nd-text-strong) 12%, transparent),
-    0 0 0 1px color-mix(in srgb, var(--nd-text-strong) 3%, transparent);
+    0 16px 40px color-mix(in srgb, var(--ink) 12%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--ink) 3%, transparent);
   animation: menuIn 160ms ease;
 
   @keyframes menuIn {
@@ -153,8 +153,8 @@ const OptionButton = styled.button<{ $selected: boolean }>`
   border: 0;
   border-radius: 10px;
   background: ${({ $selected }) =>
-    $selected ? 'color-mix(in srgb, var(--nd-accent) 10%, var(--nd-page))' : 'transparent'};
-  color: var(--nd-text-strong);
+    $selected ? 'color-mix(in srgb, var(--accent) 10%, var(--paper))' : 'transparent'};
+  color: var(--ink);
   font-size: 15px;
   line-height: 1.2;
   text-align: left;
@@ -163,7 +163,7 @@ const OptionButton = styled.button<{ $selected: boolean }>`
 
   &:hover,
   &:focus-visible {
-    background: color-mix(in srgb, var(--nd-accent) 8%, var(--nd-page));
+    background: color-mix(in srgb, var(--accent) 8%, var(--paper));
     outline: none;
   }
 `;
@@ -181,7 +181,7 @@ const OptionName = styled.span`
 
 const OptionMeta = styled.span`
   flex-shrink: 0;
-  color: var(--nd-text-muted);
+  color: var(--ink-mute);
   font-size: 12px;
   font-weight: 500;
 `;
@@ -192,8 +192,8 @@ const SelectedMark = styled.span`
   height: 18px;
   place-items: center;
   border-radius: 50%;
-  background: var(--nd-accent);
-  color: var(--nd-button-text);
+  background: var(--accent);
+  color: var(--paper-2);
   font-size: 11px;
   font-weight: 700;
 `;

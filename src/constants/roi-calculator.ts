@@ -16,9 +16,13 @@ export interface MttrInputs {
   hoursPerIncident: number;
   engineersPerIncident: number;
   costPerEngineerHour: number;
+  timeRecoveredPct: number;
+  downtimeCostPerIncident: number;
 }
 
 export interface OperationalInputs {
+  deploymentHours: number;
+  rolloutHours: number;
   instrumentationHoursWeek: number;
   collectorHoursWeek: number;
   samplingHoursWeek: number;
@@ -26,10 +30,7 @@ export interface OperationalInputs {
 }
 
 export interface LicenseInputs {
-  monitoredHosts: number;
-  licensePerHostMonth: number;
-  billedClusters: number;
-  licensePerClusterMonth: number;
+  costPerAgentMonth: number;
 }
 
 export interface CategorySavings {
@@ -45,20 +46,17 @@ export interface InfrastructureResult extends CategorySavings {
 }
 
 export const ROI_AGENTS: RoiAgent[] = [
+  { id: 'otel', name: 'Otel Agent', cpuLessPct: 51.4 },
   { id: 'datadog', name: 'DataDog', cpuLessPct: 22.0 },
   { id: 'dynatrace', name: 'Dynatrace', cpuLessPct: 20.7 },
   { id: 'newrelic', name: 'New Relic', cpuLessPct: 36.9 },
-  { id: 'otel', name: 'Otel Agent', cpuLessPct: 51.4 },
 ];
-
-/** Share of incident investigation time lost to missing or incomplete telemetry. */
-export const MTTR_TELEMETRY_GAP_PCT = 35;
 
 /** Share of manual OpenTelemetry ops Odigos can automate away. */
 export const OTEL_MAINTENANCE_REDUCTION_PCT = 75;
 
 export const ROI_DEFAULTS = {
-  agentId: 'datadog',
+  agentId: 'otel',
   infrastructure: {
     nodes: 20,
     cpusPerNode: 8,
@@ -70,18 +68,19 @@ export const ROI_DEFAULTS = {
     hoursPerIncident: 4,
     engineersPerIncident: 3,
     costPerEngineerHour: 95,
+    timeRecoveredPct: 35,
+    downtimeCostPerIncident: 0,
   },
   operational: {
+    deploymentHours: 40,
+    rolloutHours: 24,
     instrumentationHoursWeek: 6,
     collectorHoursWeek: 4,
     samplingHoursWeek: 3,
     costPerEngineerHour: 95,
   },
   license: {
-    monitoredHosts: 20,
-    licensePerHostMonth: 31,
-    billedClusters: 2,
-    licensePerClusterMonth: 0,
+    costPerAgentMonth: 620,
   },
 } as const;
 
@@ -116,32 +115,33 @@ export function calculateInfrastructureSavings(
 export function calculateMttrSavings(inputs: MttrInputs): CategorySavings {
   const annualInvestigationCost =
     inputs.majorIncidents * inputs.hoursPerIncident * inputs.engineersPerIncident * inputs.costPerEngineerHour;
-  const annual = annualInvestigationCost * (MTTR_TELEMETRY_GAP_PCT / 100);
+  const annualDowntimeCost = inputs.majorIncidents * inputs.downtimeCostPerIncident;
+  const annual = (annualInvestigationCost + annualDowntimeCost) * (inputs.timeRecoveredPct / 100);
 
   return {
     monthly: annual / 12,
     annual,
-    detail: `${MTTR_TELEMETRY_GAP_PCT}% of investigation time recovered with full coverage`,
+    detail: `${formatPercent(inputs.timeRecoveredPct)} of incident cost recovered with broader coverage`,
   };
 }
 
 export function calculateOperationalSavings(inputs: OperationalInputs): CategorySavings {
   const weeklyHours =
     inputs.instrumentationHoursWeek + inputs.collectorHoursWeek + inputs.samplingHoursWeek;
+  const oneTimeHours = inputs.deploymentHours + inputs.rolloutHours;
+  const oneTimeCost = oneTimeHours * inputs.costPerEngineerHour;
   const annualManualCost = weeklyHours * 52 * inputs.costPerEngineerHour;
-  const annual = annualManualCost * (OTEL_MAINTENANCE_REDUCTION_PCT / 100);
+  const annual = oneTimeCost + annualManualCost * (OTEL_MAINTENANCE_REDUCTION_PCT / 100);
 
   return {
     monthly: annual / 12,
     annual,
-    detail: `${OTEL_MAINTENANCE_REDUCTION_PCT}% less manual OTel pipeline work`,
+    detail: `Avoid one-time rollout work plus ${OTEL_MAINTENANCE_REDUCTION_PCT}% less ongoing manual OTel work`,
   };
 }
 
 export function calculateLicenseSavings(inputs: LicenseInputs): CategorySavings {
-  const monthly =
-    inputs.monitoredHosts * inputs.licensePerHostMonth +
-    inputs.billedClusters * inputs.licensePerClusterMonth;
+  const monthly = inputs.costPerAgentMonth;
 
   return {
     monthly,
@@ -170,4 +170,11 @@ export function formatHours(value: number) {
     maximumFractionDigits: 1,
     minimumFractionDigits: 0,
   });
+}
+
+export function formatPercent(value: number) {
+  return `${value.toLocaleString(undefined, {
+    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+  })}%`;
 }

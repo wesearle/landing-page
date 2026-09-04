@@ -3,7 +3,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import styled from 'styled-components';
 import {
-  MTTR_TELEMETRY_GAP_PCT,
   OTEL_MAINTENANCE_REDUCTION_PCT,
   ROI_AGENTS,
   ROI_DEFAULTS,
@@ -14,18 +13,19 @@ import {
   formatCores,
   formatCurrency,
   formatHours,
+  formatPercent,
   getInstrumentedCpus,
   type CategorySavings,
 } from '@/constants/roi-calculator';
 import { AgentSelect } from '@/containers/new-roi-calculator/agent-select';
 
 const Section = styled.section`
-  width: min(100% - 48px, 1360px);
+  width: min(100% - 48px, var(--maxw));
   margin: 0 auto;
   padding: 88px 0 104px;
 
   @media (max-width: 800px) {
-    width: min(100% - 32px, 1360px);
+    width: min(100% - 32px, var(--maxw));
     padding: 60px 0 72px;
   }
 `;
@@ -36,14 +36,14 @@ const Hero = styled.div`
 
 const Eyebrow = styled.div`
   margin-bottom: 20px;
-  color: var(--nd-accent);
+  color: var(--accent);
   font-size: 13px;
   font-weight: 550;
 `;
 
 const Title = styled.h1`
   margin: 0;
-  color: var(--nd-text-strong);
+  color: var(--ink);
   font-size: clamp(48px, 6vw, 84px);
   font-weight: 400;
   line-height: 0.98;
@@ -58,7 +58,7 @@ const Title = styled.h1`
 const Description = styled.p`
   max-width: 740px;
   margin: 32px 0 0;
-  color: var(--nd-text-secondary);
+  color: var(--ink-soft);
   font-size: clamp(18px, 1.65vw, 22px);
   line-height: 1.48;
   letter-spacing: -0.02em;
@@ -68,9 +68,9 @@ const GlobalPanel = styled.section`
   min-width: 0;
   padding: 28px;
   margin-bottom: 32px;
-  border: 1px solid var(--nd-border);
+  border: 1px solid var(--line);
   border-radius: 16px;
-  background: var(--nd-surface);
+  background: var(--paper-2);
 
   @media (max-width: 800px) {
     padding: 22px;
@@ -82,9 +82,9 @@ const SummaryBanner = styled.div`
   gap: 20px;
   padding: 28px;
   margin-bottom: 32px;
-  border: 1px solid color-mix(in srgb, var(--nd-accent) 28%, var(--nd-border));
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
   border-radius: 16px;
-  background: color-mix(in srgb, var(--nd-accent) 8%, var(--nd-page));
+  background: color-mix(in srgb, var(--accent) 8%, var(--paper));
 
   @media (min-width: 900px) {
     grid-template-columns: 1.2fr 1fr;
@@ -94,7 +94,7 @@ const SummaryBanner = styled.div`
 
 const SummaryTitle = styled.h2`
   margin: 0 0 8px;
-  color: var(--nd-text-strong);
+  color: var(--ink);
   font-size: clamp(28px, 3vw, 40px);
   font-weight: 500;
   letter-spacing: -0.04em;
@@ -102,13 +102,13 @@ const SummaryTitle = styled.h2`
 
 const SummarySub = styled.p`
   margin: 0;
-  color: var(--nd-text-secondary);
+  color: var(--ink-soft);
   font-size: 15px;
   line-height: 1.5;
 `;
 
 const SummaryValue = styled.div`
-  color: var(--nd-accent);
+  color: var(--accent);
   font-size: clamp(36px, 5vw, 52px);
   font-weight: 600;
   letter-spacing: -0.05em;
@@ -126,8 +126,8 @@ const BreakdownRow = styled.div`
   justify-content: space-between;
   gap: 16px;
   padding-bottom: 10px;
-  border-bottom: 1px solid color-mix(in srgb, var(--nd-accent) 16%, var(--nd-border));
-  color: var(--nd-text-secondary);
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 16%, var(--line));
+  color: var(--ink-soft);
   font-size: 14px;
 
   &:last-child {
@@ -136,7 +136,7 @@ const BreakdownRow = styled.div`
   }
 
   strong {
-    color: var(--nd-text-strong);
+    color: var(--ink);
     font-weight: 600;
   }
 `;
@@ -145,14 +145,48 @@ const CategoryBlock = styled.section`
   margin-bottom: 32px;
 `;
 
+const CategoryCard = styled.section`
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--paper-2);
+`;
+
+const CategoryToggle = styled.button`
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  width: 100%;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 28px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  @media (max-width: 800px) {
+    grid-template-columns: 1fr auto;
+    padding: 20px 22px;
+  }
+`;
+
+const CategoryContent = styled.div`
+  padding: 0 28px 28px;
+  border-top: 1px solid var(--line);
+
+  @media (max-width: 800px) {
+    padding: 0 22px 22px;
+  }
+`;
+
 const CategoryHeader = styled.div`
-  max-width: 760px;
-  margin-bottom: 20px;
+  min-width: 0;
 `;
 
 const CategoryEyebrow = styled.div`
   margin-bottom: 10px;
-  color: var(--nd-accent);
+  color: var(--accent);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.05em;
@@ -161,7 +195,7 @@ const CategoryEyebrow = styled.div`
 
 const CategoryTitle = styled.h2`
   margin: 0;
-  color: var(--nd-text-strong);
+  color: var(--ink);
   font-size: clamp(28px, 3.5vw, 40px);
   font-weight: 500;
   letter-spacing: -0.04em;
@@ -169,9 +203,45 @@ const CategoryTitle = styled.h2`
 
 const CategoryDescription = styled.p`
   margin: 12px 0 0;
-  color: var(--nd-text-secondary);
+  color: var(--ink-soft);
   font-size: 16px;
   line-height: 1.5;
+`;
+
+const CategorySavings = styled.div`
+  min-width: max-content;
+  color: var(--accent);
+  font-size: clamp(20px, 2vw, 28px);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+
+  @media (max-width: 800px) {
+    grid-column: 1 / -1;
+    font-size: 18px;
+  }
+`;
+
+const CategoryChevron = styled.span<{ $open: boolean }>`
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--paper-3);
+  color: var(--ink-soft);
+  transform: rotate(${({ $open }) => ($open ? '180deg' : '0deg')});
+  transition:
+    transform 180ms ease,
+    color 160ms ease,
+    background 160ms ease;
+`;
+
+const ChevronIcon = styled.span`
+  width: 10px;
+  height: 10px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-1px) rotate(45deg);
 `;
 
 const Layout = styled.div`
@@ -188,9 +258,9 @@ const Layout = styled.div`
 const Panel = styled.section`
   min-width: 0;
   padding: 28px;
-  border: 1px solid var(--nd-border);
+  border: 1px solid var(--line);
   border-radius: 16px;
-  background: var(--nd-surface);
+  background: var(--paper-2);
 
   @media (max-width: 800px) {
     padding: 22px;
@@ -199,7 +269,7 @@ const Panel = styled.section`
 
 const PanelTitle = styled.h3`
   margin: 0 0 24px;
-  color: var(--nd-text-strong);
+  color: var(--ink);
   font-size: 20px;
   font-weight: 500;
   letter-spacing: -0.03em;
@@ -219,7 +289,7 @@ const Field = styled.div`
 `;
 
 const Label = styled.label`
-  color: var(--nd-text-secondary);
+  color: var(--ink-soft);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -228,7 +298,7 @@ const Label = styled.label`
 
 const Hint = styled.p`
   margin: 0;
-  color: var(--nd-text-muted);
+  color: var(--ink-mute);
   font-size: 13px;
   line-height: 1.45;
 `;
@@ -240,10 +310,10 @@ const Input = styled.input`
   max-width: 100%;
   min-width: 0;
   padding: 14px 16px;
-  border: 1px solid var(--nd-border);
+  border: 1px solid var(--line);
   border-radius: 12px;
-  background: var(--nd-page);
-  color: var(--nd-text-strong);
+  background: var(--paper);
+  color: var(--ink);
   font-size: 15px;
   line-height: 1.2;
   outline: none;
@@ -263,21 +333,118 @@ const Input = styled.input`
   }
 
   &:focus {
-    border-color: var(--nd-accent);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--nd-accent) 18%, transparent);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
   }
+`;
+
+const RangeWrap = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+const RangeInput = styled.input`
+  width: 100%;
+  height: 22px;
+  margin: 0;
+  border-radius: 999px;
+  background:
+    linear-gradient(var(--accent), var(--accent)) center / 100% 4px no-repeat,
+    repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent calc(25% - 1px),
+      color-mix(in srgb, var(--ink-mute) 55%, transparent) calc(25% - 1px),
+      color-mix(in srgb, var(--ink-mute) 55%, transparent) 25%
+    )
+    center / 100% 10px no-repeat;
+  appearance: none;
+  cursor: pointer;
+
+  &::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 999px;
+    background: transparent;
+  }
+
+  &::-webkit-slider-thumb {
+    width: 18px;
+    height: 18px;
+    margin-top: -7px;
+    border: 2px solid var(--paper);
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow:
+      0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent),
+      0 4px 14px color-mix(in srgb, var(--ink) 22%, transparent);
+    -webkit-appearance: none;
+  }
+
+  &::-moz-range-track {
+    height: 4px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+  }
+
+  &::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--paper);
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow:
+      0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent),
+      0 4px 14px color-mix(in srgb, var(--ink) 22%, transparent);
+  }
+`;
+
+const RangeMeta = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+`;
+
+const RangeTicks = styled.div`
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0;
+  padding: 0 9px;
+`;
+
+const RangeTick = styled.span`
+  justify-self: center;
+  width: 1px;
+  height: 8px;
+  background: color-mix(in srgb, var(--ink-mute) 55%, transparent);
+`;
+
+const RangeValue = styled.div`
+  flex-shrink: 0;
+  min-width: 72px;
+  padding: 8px 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--paper));
+  color: var(--accent);
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  text-align: center;
 `;
 
 const DerivedBanner = styled.div`
   margin-top: 24px;
   padding: 18px 20px;
-  border: 1px solid color-mix(in srgb, var(--nd-accent) 28%, var(--nd-border));
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
   border-radius: 12px;
-  background: color-mix(in srgb, var(--nd-accent) 8%, var(--nd-page));
+  background: color-mix(in srgb, var(--accent) 8%, var(--paper));
 `;
 
 const DerivedLabel = styled.div`
-  color: var(--nd-text-secondary);
+  color: var(--ink-soft);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -286,7 +453,7 @@ const DerivedLabel = styled.div`
 
 const DerivedValue = styled.div`
   margin-top: 6px;
-  color: var(--nd-accent);
+  color: var(--accent);
   font-size: clamp(24px, 3.5vw, 32px);
   font-weight: 600;
   letter-spacing: -0.04em;
@@ -294,13 +461,13 @@ const DerivedValue = styled.div`
 
 const DerivedSub = styled.div`
   margin-top: 6px;
-  color: var(--nd-text-muted);
+  color: var(--ink-mute);
   font-size: 13px;
 `;
 
 const Metric = styled.div`
   padding: 16px 0;
-  border-bottom: 1px solid var(--nd-border);
+  border-bottom: 1px solid var(--line);
 
   &:last-child {
     border-bottom: 0;
@@ -309,12 +476,24 @@ const Metric = styled.div`
 
 const MetricLabel = styled.div`
   margin-bottom: 8px;
-  color: var(--nd-text-secondary);
+  color: var(--ink-soft);
   font-size: 13px;
 `;
 
+const MetricLabelRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+
+  ${MetricLabel} {
+    margin-bottom: 0;
+  }
+`;
+
 const MetricValue = styled.div<{ $highlight?: boolean }>`
-  color: ${({ $highlight }) => ($highlight ? 'var(--nd-accent)' : 'var(--nd-text-strong)')};
+  color: ${({ $highlight }) => ($highlight ? 'var(--accent)' : 'var(--ink)')};
   font-size: clamp(24px, 3.5vw, 32px);
   font-weight: 600;
   letter-spacing: -0.04em;
@@ -322,7 +501,7 @@ const MetricValue = styled.div<{ $highlight?: boolean }>`
 
 const MetricSub = styled.div`
   margin-top: 6px;
-  color: var(--nd-text-muted);
+  color: var(--ink-mute);
   font-size: 13px;
 `;
 
@@ -339,8 +518,8 @@ const Table = styled.table`
 
 const Th = styled.th`
   padding: 14px 12px;
-  border-bottom: 1px solid var(--nd-border);
-  color: var(--nd-text-secondary);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-soft);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -350,35 +529,35 @@ const Th = styled.th`
 
 const Td = styled.td`
   padding: 16px 12px;
-  border-bottom: 1px solid var(--nd-border);
-  color: var(--nd-text);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-soft);
   font-size: 14px;
 `;
 
 const AgentName = styled.td`
   padding: 16px 12px;
-  border-bottom: 1px solid var(--nd-border);
-  color: var(--nd-text-strong);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
   font-size: 15px;
   font-weight: 600;
 `;
 
 const ActiveRow = styled.tr`
-  background: color-mix(in srgb, var(--nd-accent) 6%, var(--nd-page));
+  background: color-mix(in srgb, var(--accent) 6%, var(--paper));
 
   ${AgentName}, ${Td} {
-    color: var(--nd-accent);
+    color: var(--accent);
   }
 
   ${AgentName} {
-    box-shadow: inset 3px 0 0 var(--nd-accent);
+    box-shadow: inset 3px 0 0 var(--accent);
   }
 `;
 
 const Footnote = styled.p`
   max-width: 760px;
   margin: 8px 0 0;
-  color: var(--nd-text-muted);
+  color: var(--ink-mute);
   font-size: 13px;
   line-height: 1.55;
 `;
@@ -436,6 +615,43 @@ const parseNumber = (value: string, fallback = 0) => Math.max(0, Number(value) |
 
 const parsePercent = (value: string) => Math.min(100, Math.max(0, Number(value) || 0));
 
+interface CollapsibleCategoryProps {
+  sectionLabel: string;
+  title: string;
+  description: string;
+  annualSavings: number;
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}
+
+const CollapsibleCategory = ({
+  sectionLabel,
+  title,
+  description,
+  annualSavings,
+  open,
+  onToggle,
+  children,
+}: CollapsibleCategoryProps) => (
+  <CategoryBlock>
+    <CategoryCard>
+      <CategoryToggle type='button' onClick={onToggle} aria-expanded={open}>
+        <CategoryHeader>
+          <CategoryEyebrow>{sectionLabel}</CategoryEyebrow>
+          <CategoryTitle>{title}</CategoryTitle>
+          <CategoryDescription>{description}</CategoryDescription>
+        </CategoryHeader>
+        <CategorySavings>{formatCurrency(annualSavings)}</CategorySavings>
+        <CategoryChevron $open={open} aria-hidden='true'>
+          <ChevronIcon />
+        </CategoryChevron>
+      </CategoryToggle>
+      {open ? <CategoryContent>{children}</CategoryContent> : null}
+    </CategoryCard>
+  </CategoryBlock>
+);
+
 export const NewRoiCalculator = () => {
   const [agentId, setAgentId] = useState<string>(ROI_DEFAULTS.agentId);
 
@@ -448,7 +664,13 @@ export const NewRoiCalculator = () => {
   const [hoursPerIncident, setHoursPerIncident] = useState(String(ROI_DEFAULTS.mttr.hoursPerIncident));
   const [engineersPerIncident, setEngineersPerIncident] = useState(String(ROI_DEFAULTS.mttr.engineersPerIncident));
   const [mttrCostPerHour, setMttrCostPerHour] = useState(String(ROI_DEFAULTS.mttr.costPerEngineerHour));
+  const [timeRecoveredPct, setTimeRecoveredPct] = useState(String(ROI_DEFAULTS.mttr.timeRecoveredPct));
+  const [downtimeCostPerIncident, setDowntimeCostPerIncident] = useState(
+    String(ROI_DEFAULTS.mttr.downtimeCostPerIncident),
+  );
 
+  const [deploymentHours, setDeploymentHours] = useState(String(ROI_DEFAULTS.operational.deploymentHours));
+  const [rolloutHours, setRolloutHours] = useState(String(ROI_DEFAULTS.operational.rolloutHours));
   const [instrumentationHoursWeek, setInstrumentationHoursWeek] = useState(
     String(ROI_DEFAULTS.operational.instrumentationHoursWeek),
   );
@@ -458,12 +680,13 @@ export const NewRoiCalculator = () => {
     String(ROI_DEFAULTS.operational.costPerEngineerHour),
   );
 
-  const [monitoredHosts, setMonitoredHosts] = useState(String(ROI_DEFAULTS.license.monitoredHosts));
-  const [licensePerHostMonth, setLicensePerHostMonth] = useState(String(ROI_DEFAULTS.license.licensePerHostMonth));
-  const [billedClusters, setBilledClusters] = useState(String(ROI_DEFAULTS.license.billedClusters));
-  const [licensePerClusterMonth, setLicensePerClusterMonth] = useState(
-    String(ROI_DEFAULTS.license.licensePerClusterMonth),
-  );
+  const [costPerAgentMonth, setCostPerAgentMonth] = useState(String(ROI_DEFAULTS.license.costPerAgentMonth));
+  const [openSections, setOpenSections] = useState({
+    infrastructure: false,
+    incident: false,
+    operational: false,
+    license: false,
+  });
 
   const agent = useMemo(
     () => ROI_AGENTS.find((item) => item.id === agentId) ?? ROI_AGENTS[0],
@@ -488,28 +711,29 @@ export const NewRoiCalculator = () => {
       hoursPerIncident: parseNumber(hoursPerIncident),
       engineersPerIncident: parseNumber(engineersPerIncident),
       costPerEngineerHour: parseNumber(mttrCostPerHour),
+      timeRecoveredPct: parsePercent(timeRecoveredPct),
+      downtimeCostPerIncident: parseNumber(downtimeCostPerIncident),
     }),
-    [majorIncidents, hoursPerIncident, engineersPerIncident, mttrCostPerHour],
+    [majorIncidents, hoursPerIncident, engineersPerIncident, mttrCostPerHour, timeRecoveredPct, downtimeCostPerIncident],
   );
 
   const operationalInputs = useMemo(
     () => ({
+      deploymentHours: parseNumber(deploymentHours),
+      rolloutHours: parseNumber(rolloutHours),
       instrumentationHoursWeek: parseNumber(instrumentationHoursWeek),
       collectorHoursWeek: parseNumber(collectorHoursWeek),
       samplingHoursWeek: parseNumber(samplingHoursWeek),
       costPerEngineerHour: parseNumber(operationalCostPerHour),
     }),
-    [instrumentationHoursWeek, collectorHoursWeek, samplingHoursWeek, operationalCostPerHour],
+    [deploymentHours, rolloutHours, instrumentationHoursWeek, collectorHoursWeek, samplingHoursWeek, operationalCostPerHour],
   );
 
   const licenseInputs = useMemo(
     () => ({
-      monitoredHosts: parseNumber(monitoredHosts),
-      licensePerHostMonth: parseNumber(licensePerHostMonth),
-      billedClusters: parseNumber(billedClusters),
-      licensePerClusterMonth: parseNumber(licensePerClusterMonth),
+      costPerAgentMonth: parseNumber(costPerAgentMonth),
     }),
-    [monitoredHosts, licensePerHostMonth, billedClusters, licensePerClusterMonth],
+    [costPerAgentMonth],
   );
 
   const { clusterCpu, totalCpu } = useMemo(
@@ -551,11 +775,19 @@ export const NewRoiCalculator = () => {
     operationalInputs.instrumentationHoursWeek +
     operationalInputs.collectorHoursWeek +
     operationalInputs.samplingHoursWeek;
+  const oneTimeOperationalHours = operationalInputs.deploymentHours + operationalInputs.rolloutHours;
+  const oneTimeOperationalCost = oneTimeOperationalHours * operationalInputs.costPerEngineerHour;
   const annualInvestigationCost =
     mttrInputs.majorIncidents *
     mttrInputs.hoursPerIncident *
     mttrInputs.engineersPerIncident *
     mttrInputs.costPerEngineerHour;
+  const annualDowntimeCost = mttrInputs.majorIncidents * mttrInputs.downtimeCostPerIncident;
+  const incidentHoursRecovered =
+    mttrInputs.majorIncidents *
+    mttrInputs.hoursPerIncident *
+    mttrInputs.engineersPerIncident *
+    (mttrInputs.timeRecoveredPct / 100);
 
   const breakdownItems = [
     { label: 'Infrastructure costs', value: infrastructureSavings.annual },
@@ -564,6 +796,12 @@ export const NewRoiCalculator = () => {
       ? [{ label: 'OTel pipeline maintenance', value: operationalSavings.annual }]
       : [{ label: 'Agent license fees', value: licenseSavings.annual }]),
   ];
+
+  const toggleSection = (key: keyof typeof openSections) =>
+    setOpenSections((current) => ({
+      ...current,
+      [key]: !current[key],
+    }));
 
   return (
     <Section>
@@ -602,15 +840,14 @@ export const NewRoiCalculator = () => {
         </SummaryBreakdown>
       </SummaryBanner>
 
-      <CategoryBlock>
-        <CategoryHeader>
-          <CategoryEyebrow>Section 1</CategoryEyebrow>
-          <CategoryTitle>Infrastructure costs</CategoryTitle>
-          <CategoryDescription>
-            CPU overhead from your current agent vs Odigos on the nodes and cores you instrument today.
-          </CategoryDescription>
-        </CategoryHeader>
-
+      <CollapsibleCategory
+        sectionLabel='Section 1'
+        title='Infrastructure costs'
+        description='CPU overhead from your current agent vs Odigos on the nodes and cores you instrument today.'
+        annualSavings={infrastructureSavings.annual}
+        open={openSections.infrastructure}
+        onToggle={() => toggleSection('infrastructure')}
+      >
         <Layout>
           <Panel>
             <PanelTitle>Environment sizing</PanelTitle>
@@ -697,18 +934,16 @@ export const NewRoiCalculator = () => {
             </Table>
           </TableScroll>
         </Panel>
-      </CategoryBlock>
+      </CollapsibleCategory>
 
-      <CategoryBlock>
-        <CategoryHeader>
-          <CategoryEyebrow>Section 2</CategoryEyebrow>
-          <CategoryTitle>Incident resolution</CategoryTitle>
-          <CategoryDescription>
-            Odigos delivers broader zero-code coverage, reducing time spent hunting root cause when telemetry was never
-            there in the first place.
-          </CategoryDescription>
-        </CategoryHeader>
-
+      <CollapsibleCategory
+        sectionLabel='Section 2'
+        title='Incident resolution'
+        description='Odigos delivers broader zero-code coverage, reducing time spent hunting root cause when telemetry was never there in the first place.'
+        annualSavings={mttrSavings.annual}
+        open={openSections.incident}
+        onToggle={() => toggleSection('incident')}
+      >
         <Layout>
           <Panel>
             <PanelTitle>Incident response inputs</PanelTitle>
@@ -746,55 +981,106 @@ export const NewRoiCalculator = () => {
               min={0}
               step={1}
             />
+            <NumberField
+              id='roi-downtime-cost'
+              label='Application downtime cost per incident'
+              hint='Optional business impact added to each major incident.'
+              value={downtimeCostPerIncident}
+              onChange={setDowntimeCostPerIncident}
+              min={0}
+              step={1}
+            />
             <DerivedBanner>
-              <DerivedLabel>Annual investigation cost</DerivedLabel>
-              <DerivedValue>{formatCurrency(annualInvestigationCost)}</DerivedValue>
+              <DerivedLabel>Annual incident cost in scope</DerivedLabel>
+              <DerivedValue>{formatCurrency(annualInvestigationCost + annualDowntimeCost)}</DerivedValue>
               <DerivedSub>
                 {mttrInputs.majorIncidents} incidents × {formatHours(mttrInputs.hoursPerIncident)} hrs ×{' '}
                 {mttrInputs.engineersPerIncident} engineers
+                {annualDowntimeCost > 0 ? ` + ${formatCurrency(annualDowntimeCost)} downtime impact` : ''}
               </DerivedSub>
             </DerivedBanner>
           </Panel>
 
           <SavingsPanel title='MTTR savings' savings={mttrSavings}>
             <Metric>
-              <MetricLabel>Time recovered from coverage gaps</MetricLabel>
-              <MetricValue $highlight>{MTTR_TELEMETRY_GAP_PCT}%</MetricValue>
+              <MetricLabelRow>
+                <MetricLabel>Time recovered from coverage gaps</MetricLabel>
+                <RangeValue>{formatPercent(mttrInputs.timeRecoveredPct)}</RangeValue>
+              </MetricLabelRow>
+              <RangeWrap>
+                <RangeInput
+                  id='roi-time-recovered'
+                  type='range'
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={timeRecoveredPct}
+                  onChange={(event) => setTimeRecoveredPct(event.target.value)}
+                  aria-label='Time recovered from coverage gaps'
+                />
+                <RangeTicks aria-hidden='true'>
+                  <RangeTick />
+                  <RangeTick />
+                  <RangeTick />
+                  <RangeTick />
+                  <RangeTick />
+                </RangeTicks>
+                <RangeMeta>
+                  <Hint>Choose how much incident time broader telemetry coverage could recover.</Hint>
+                </RangeMeta>
+              </RangeWrap>
               <MetricSub>
-                We estimate {MTTR_TELEMETRY_GAP_PCT}% of investigation time is lost to missing or incomplete telemetry
-                that Odigos would have captured automatically.
+                This slider applies to engineering investigation cost and any optional downtime cost you include.
               </MetricSub>
             </Metric>
             <Metric>
               <MetricLabel>Investigation hours saved per year</MetricLabel>
-              <MetricValue>
-                {formatHours(
-                  mttrInputs.majorIncidents *
-                    mttrInputs.hoursPerIncident *
-                    mttrInputs.engineersPerIncident *
-                    (MTTR_TELEMETRY_GAP_PCT / 100),
-                )}{' '}
-                hrs
-              </MetricValue>
+              <MetricValue>{formatHours(incidentHoursRecovered)} hrs</MetricValue>
+            </Metric>
+            {annualDowntimeCost > 0 ? (
+              <Metric>
+                <MetricLabel>Annual downtime cost considered</MetricLabel>
+                <MetricValue>{formatCurrency(annualDowntimeCost)}</MetricValue>
+              </Metric>
+            ) : null}
+            <Metric>
+              <MetricLabel>Annual investigation labor cost</MetricLabel>
+              <MetricValue>{formatCurrency(annualInvestigationCost)}</MetricValue>
             </Metric>
           </SavingsPanel>
         </Layout>
-      </CategoryBlock>
+      </CollapsibleCategory>
 
       {isOtelAgent ? (
-        <CategoryBlock>
-          <CategoryHeader>
-            <CategoryEyebrow>Section 3</CategoryEyebrow>
-            <CategoryTitle>OTel pipeline maintenance</CategoryTitle>
-            <CategoryDescription>
-              Time your team spends building and maintaining OpenTelemetry instrumentation, collectors, pipelines, and
-              sampling — work Odigos automates with zero-code delivery.
-            </CategoryDescription>
-          </CategoryHeader>
-
+        <CollapsibleCategory
+          sectionLabel='Section 3'
+          title='OTel pipeline maintenance'
+          description='Time your team spends building and maintaining OpenTelemetry instrumentation, collectors, pipelines, and sampling; work Odigos automates with zero-code delivery.'
+          annualSavings={operationalSavings.annual}
+          open={openSections.operational}
+          onToggle={() => toggleSection('operational')}
+        >
           <Layout>
             <Panel>
               <PanelTitle>Operational maintenance inputs</PanelTitle>
+              <NumberField
+                id='roi-deployment-hours'
+                label='Initial instrumentation effort (hours)'
+                hint='One-time engineering effort to add OpenTelemetry instrumentation across services.'
+                value={deploymentHours}
+                onChange={setDeploymentHours}
+                min={0}
+                step={1}
+              />
+              <NumberField
+                id='roi-rollout-hours'
+                label='Rollout and validation effort (hours)'
+                hint='One-time deployment, QA, and rollout coordination across environments.'
+                value={rolloutHours}
+                onChange={setRolloutHours}
+                min={0}
+                step={1}
+              />
               <NumberField
                 id='roi-instrumentation-hours'
                 label='Instrumentation maintenance (hours/week)'
@@ -831,13 +1117,20 @@ export const NewRoiCalculator = () => {
                 step={1}
               />
               <DerivedBanner>
-                <DerivedLabel>Weekly OTel maintenance</DerivedLabel>
-                <DerivedValue>{formatHours(weeklyOperationalHours)} hrs</DerivedValue>
-                <DerivedSub>{formatHours(weeklyOperationalHours * 52)} hours per year at current pace</DerivedSub>
+                <DerivedLabel>OTel effort in scope</DerivedLabel>
+                <DerivedValue>{formatCurrency(oneTimeOperationalCost + weeklyOperationalHours * 52 * operationalInputs.costPerEngineerHour)}</DerivedValue>
+                <DerivedSub>
+                  {formatHours(oneTimeOperationalHours)} one-time hours + {formatHours(weeklyOperationalHours * 52)} ongoing hours per year
+                </DerivedSub>
               </DerivedBanner>
             </Panel>
 
             <SavingsPanel title='Operational savings' savings={operationalSavings}>
+              <Metric>
+                <MetricLabel>One-time deployment and rollout cost avoided</MetricLabel>
+                <MetricValue>{formatCurrency(oneTimeOperationalCost)}</MetricValue>
+                <MetricSub>{formatHours(oneTimeOperationalHours)} hours across instrumentation and rollout work</MetricSub>
+              </Metric>
               <Metric>
                 <MetricLabel>Manual work Odigos can remove</MetricLabel>
                 <MetricValue $highlight>{OTEL_MAINTENANCE_REDUCTION_PCT}%</MetricValue>
@@ -851,88 +1144,49 @@ export const NewRoiCalculator = () => {
               </Metric>
             </SavingsPanel>
           </Layout>
-        </CategoryBlock>
+        </CollapsibleCategory>
       ) : (
-        <CategoryBlock>
-          <CategoryHeader>
-            <CategoryEyebrow>Section 3</CategoryEyebrow>
-            <CategoryTitle>Agent license fees</CategoryTitle>
-            <CategoryDescription>
-              License spend for {agent.name} across the hosts and clusters you would replace with Odigos.
-            </CategoryDescription>
-          </CategoryHeader>
-
+        <CollapsibleCategory
+          sectionLabel='Section 3'
+          title='Agent license fees'
+          description={`License spend for ${agent.name} across the hosts and clusters you would replace with Odigos.`}
+          annualSavings={licenseSavings.annual}
+          open={openSections.license}
+          onToggle={() => toggleSection('license')}
+        >
           <Layout>
             <Panel>
               <PanelTitle>License inputs</PanelTitle>
               <NumberField
-                id='roi-monitored-hosts'
-                label='Monitored hosts / nodes'
-                hint='Servers, VMs, or Kubernetes nodes billed for the agent.'
-                value={monitoredHosts}
-                onChange={setMonitoredHosts}
-                min={0}
-                step={1}
-              />
-              <NumberField
-                id='roi-license-per-host'
-                label='Agent license cost per host / month'
-                hint={`Per-host fee for ${agent.name} (e.g. infrastructure monitoring).`}
-                value={licensePerHostMonth}
-                onChange={setLicensePerHostMonth}
-                min={0}
-                step={0.01}
-              />
-              <NumberField
-                id='roi-billed-clusters'
-                label='Kubernetes clusters billed separately'
-                hint='Leave at 0 if cluster fees are not part of your contract.'
-                value={billedClusters}
-                onChange={setBilledClusters}
-                min={0}
-                step={1}
-              />
-              <NumberField
-                id='roi-license-per-cluster'
-                label='License fee per cluster / month'
-                value={licensePerClusterMonth}
-                onChange={setLicensePerClusterMonth}
+                id='roi-cost-per-agent-month'
+                label='Cost per agent / month'
+                hint={`Monthly license cost for ${agent.name} that Odigos would replace.`}
+                value={costPerAgentMonth}
+                onChange={setCostPerAgentMonth}
                 min={0}
                 step={0.01}
               />
               <DerivedBanner>
                 <DerivedLabel>Current monthly license spend</DerivedLabel>
                 <DerivedValue>{formatCurrency(licenseSavings.monthly)}</DerivedValue>
-                <DerivedSub>
-                  {licenseInputs.monitoredHosts} hosts × {formatCurrency(licenseInputs.licensePerHostMonth)}
-                  {licenseInputs.billedClusters > 0
-                    ? ` + ${licenseInputs.billedClusters} clusters × ${formatCurrency(licenseInputs.licensePerClusterMonth)}`
-                    : ''}
-                </DerivedSub>
+                <DerivedSub>Single monthly vendor agent cost replaced by Odigos.</DerivedSub>
               </DerivedBanner>
             </Panel>
 
             <SavingsPanel title='License savings' savings={licenseSavings}>
               <Metric>
-                <MetricLabel>Hosts removed from {agent.name} billing</MetricLabel>
-                <MetricValue>{licenseInputs.monitoredHosts.toLocaleString()}</MetricValue>
+                <MetricLabel>Monthly agent cost removed</MetricLabel>
+                <MetricValue>{formatCurrency(licenseInputs.costPerAgentMonth)}</MetricValue>
               </Metric>
-              {licenseInputs.billedClusters > 0 ? (
-                <Metric>
-                  <MetricLabel>Clusters removed from billing</MetricLabel>
-                  <MetricValue>{licenseInputs.billedClusters.toLocaleString()}</MetricValue>
-                </Metric>
-              ) : null}
             </SavingsPanel>
           </Layout>
-        </CategoryBlock>
+        </CollapsibleCategory>
       )}
 
       <Footnote>
-        Infrastructure: instrumented CPUs × agent overhead % × cost per CPU. Incident resolution: assumes{' '}
-        {MTTR_TELEMETRY_GAP_PCT}% of investigation time is lost to telemetry gaps Odigos would close. OTel maintenance: assumes{' '}
-        {OTEL_MAINTENANCE_REDUCTION_PCT}% of manual pipeline work is eliminated. License: full agent license spend on listed
-        hosts and clusters.
+        Infrastructure: instrumented CPUs × agent overhead % × cost per CPU. Incident resolution: (engineering investigation cost +
+        optional downtime cost) × selected recovery %. OTel maintenance: one-time rollout cost avoided plus{' '}
+        {OTEL_MAINTENANCE_REDUCTION_PCT}% of manual pipeline work eliminated. License: monthly vendor agent cost × 12.
       </Footnote>
     </Section>
   );
